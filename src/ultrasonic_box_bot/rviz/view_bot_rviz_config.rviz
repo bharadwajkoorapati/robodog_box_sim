@@ -6,6 +6,7 @@ Panels:
         - /Global Options1
         - /RobotModel1
         - /TF1
+        - /PointCloud21
       Splitter Ratio: 0.5
   - Class: rviz_common/Views
     Name: Views
@@ -61,6 +62,24 @@ Visualization Manager:
         Value: /us_right
       Size (m): 0.03
       Color: 255; 255; 0
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: true
+      Name: lidar_scan
+      Topic:
+        Value: /scan
+        Reliability Policy: Best Effort
+      Size (m): 0.02
+      Color: 255; 255; 255
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: PointCloud2
+      Topic:
+        Value: /scan/points
+        Reliability Policy: Best Effort
+      Style: Points
+      Size (m): 0.02
+      Color Transformer: AxisColor
+      Axis: Z
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

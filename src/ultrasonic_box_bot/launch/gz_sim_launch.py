@@ -42,8 +42,8 @@ def generate_launch_description():
         output='screen'
     )
 
-    # NOTE: the world name below MUST match <world name="..."> in empty_us.sdf
-    # and the model name MUST match the -name given to `create` above.
+    # NOTE: world name must match <world name="..."> in empty_us_world.sdf,
+    # and model name must match the -name given to `create` above.
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -52,6 +52,8 @@ def generate_launch_description():
             '/us_back@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
             '/us_left@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
             '/us_right@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/scan/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
             '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',

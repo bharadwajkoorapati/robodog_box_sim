@@ -77,7 +77,7 @@
     <material>Gazebo/Grey</material>
   </gazebo>
 
-  <!-- ================= WHEELS (caster-free, simple fixed support) ================= -->
+  <!-- ================= WHEELS ================= -->
   <xacro:macro name="wheel" params="prefix reflect_y">
     <link name="${prefix}_wheel_link">
       <visual>
@@ -99,7 +99,7 @@
     <joint name="${prefix}_wheel_joint" type="continuous">
       <parent link="base_link"/>
       <child link="${prefix}_wheel_link"/>
-      <origin xyz="${box_x/4.0} ${reflect_y*(box_y/2.0 + wheel_width/2.0)} ${-wheel_radius}" rpy="0 0 0"/>
+      <origin xyz="${box_x/4.0} ${reflect_y*(box_y/2.0 + wheel_width/2.0)} ${-box_z/2.0}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
     </joint>
 
@@ -111,7 +111,7 @@
   <xacro:wheel prefix="left" reflect_y="1"/>
   <xacro:wheel prefix="right" reflect_y="-1"/>
 
-  <!-- Rear caster (simple fixed sphere support so the box does not tip) -->
+  <!-- Rear caster -->
   <link name="caster_wheel_link">
     <visual>
       <geometry>
@@ -141,8 +141,6 @@
   </gazebo>
 
   <!-- ================= ULTRASONIC SENSOR MACRO ================= -->
-  <!-- Simulated with a narrow-FOV gpu_lidar (single ray), the standard
-       way to emulate an HC-SR04-style ultrasonic sensor in Gazebo Harmonic -->
   <xacro:macro name="ultrasonic_sensor" params="name x y z yaw">
     <link name="${name}_link">
       <visual>
@@ -203,13 +201,78 @@
     </gazebo>
   </xacro:macro>
 
-  <!-- ================= 4 SENSORS: FRONT, BACK, LEFT, RIGHT ================= -->
   <xacro:ultrasonic_sensor name="us_front" x="${box_x/2.0 + us_len/2.0}" y="0" z="${box_z/4.0}" yaw="0"/>
   <xacro:ultrasonic_sensor name="us_back"  x="${-(box_x/2.0 + us_len/2.0)}" y="0" z="${box_z/4.0}" yaw="3.14159"/>
   <xacro:ultrasonic_sensor name="us_left"  x="0" y="${box_y/2.0 + us_len/2.0}" z="${box_z/4.0}" yaw="1.5708"/>
   <xacro:ultrasonic_sensor name="us_right" x="0" y="${-(box_y/2.0 + us_len/2.0)}" z="${box_z/4.0}" yaw="-1.5708"/>
 
-  <!-- ================= GAZEBO DIFF DRIVE PLUGIN (optional mobility) ================= -->
+  <!-- ================= TOP-MOUNTED 2D LIDAR ================= -->
+  <xacro:property name="lidar_radius" value="0.02"/>
+  <xacro:property name="lidar_height" value="0.03"/>
+  <xacro:property name="lidar_range_min" value="0.08"/>
+  <xacro:property name="lidar_range_max" value="10.0"/>
+  <xacro:property name="lidar_samples" value="360"/>
+
+  <link name="lidar_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 ${box_z/2.0 + lidar_height/2.0}" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo reference="lidar_link">
+    <material>Gazebo/Black</material>
+    <sensor name="lidar" type="gpu_lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>scan</topic>
+      <gz_frame_id>lidar_link</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>${lidar_samples}</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>1</samples>
+            <resolution>1</resolution>
+            <min_angle>0.0</min_angle>
+            <max_angle>0.0</max_angle>
+          </vertical>
+        </scan>
+        <range>
+          <min>${lidar_range_min}</min>
+          <max>${lidar_range_max}</max>
+          <resolution>0.01</resolution>
+        </range>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- ================= GAZEBO DIFF DRIVE PLUGIN ================= -->
   <gazebo>
     <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
       <left_joint>left_wheel_joint</left_joint>
