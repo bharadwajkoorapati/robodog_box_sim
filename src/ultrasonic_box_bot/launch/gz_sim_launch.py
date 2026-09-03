@@ -6,7 +6,11 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable
 
+set_nv_offload = SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1')
+set_glx_vendor = SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia')
+set_no_sw = SetEnvironmentVariable('LIBGL_ALWAYS_SOFTWARE', '0')
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('ultrasonic_box_bot')
@@ -76,6 +80,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        set_nv_offload,
+        set_glx_vendor,
+        set_no_sw,
         robot_state_publisher,
         gz_sim,
         spawn_entity,
