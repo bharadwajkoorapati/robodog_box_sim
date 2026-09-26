@@ -46,8 +46,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # NOTE: world name must match <world name="..."> in empty_us_world.sdf,
-    # and model name must match the -name given to `create` above.
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',

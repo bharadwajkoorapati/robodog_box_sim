@@ -15,6 +15,8 @@
   <xacro:property name="us_range_min" value="0.02"/>
   <xacro:property name="us_range_max" value="4.0"/>
   <xacro:property name="us_fov" value="0.26"/> <!-- ~15 deg cone in radians -->
+  <xacro:property name="lidar_fov" value="3.14159"/> <!-- ~180 deg in radians -->
+  <xacro:property name="lidar_range_max" value="7.0"/>
 
   <material name="grey">
     <color rgba="0.6 0.6 0.6 1.0"/>
@@ -181,8 +183,8 @@
             <horizontal>
               <samples>5</samples>
               <resolution>1</resolution>
-              <min_angle>-${us_fov/2.0}</min_angle>
-              <max_angle>${us_fov/2.0}</max_angle>
+              <min_angle>-${lidar_fov/2.0}</min_angle>
+              <max_angle>${lidar_fov/2.0}</max_angle>
             </horizontal>
             <vertical>
               <samples>1</samples>
@@ -193,7 +195,7 @@
           </scan>
           <range>
             <min>${us_range_min}</min>
-            <max>${us_range_max}</max>
+            <max>${lidar_range_max}</max>
             <resolution>0.01</resolution>
           </range>
         </lidar>
