@@ -15,10 +15,13 @@ install(DIRECTORY
 
 
 add_executable(ultrasonic_listener src/ultrasonic_listener.cpp)
+add_executable(lidar_detector src/lidar_detector.cpp)
+ament_target_dependencies(lidar_detector rclcpp sensor_msgs)
 ament_target_dependencies(ultrasonic_listener rclcpp sensor_msgs)
 
 install(TARGETS
   ultrasonic_listener
+  lidar_detector
   DESTINATION lib/${PROJECT_NAME}
 )
 
