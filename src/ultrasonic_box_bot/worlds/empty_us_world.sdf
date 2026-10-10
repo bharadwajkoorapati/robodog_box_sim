@@ -43,15 +43,15 @@
     </model>
 
     <!-- A wall in front so the front ultrasonic sensor has something to detect -->
-    <model name="test_wall">
+    <model name="maze_wall_1">
       <static>true</static>
-      <pose>1.5 0 0.5 0 0 0</pose>
+      <pose>1 1 0.5 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><box><size>0.1 2 1</size></box></geometry>
+          <geometry><box><size>0.1 8 1</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry><box><size>0.1 2 1</size></box></geometry>
+          <geometry><box><size>0.1 8 1</size></box></geometry>
           <material>
             <ambient>0.8 0.2 0.2 1</ambient>
             <diffuse>0.8 0.2 0.2 1</diffuse>
@@ -59,15 +59,96 @@
         </visual>
       </link>
     </model>
-    <model name="test_wall_2">
+    <model name="maze_wall_2">
       <static>true</static>
-      <pose>2.5 -2.5 0.5 0 0 -0.785</pose>
+      <pose>3 -1 0.5 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><box><size>0.1 2 1</size></box></geometry>
+          <geometry><box><size>0.1 8 1</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry><box><size>0.1 2 1</size></box></geometry>
+          <geometry><box><size>0.1 8 1</size></box></geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="cube_target">
+      <static>true</static>
+      <pose>4 -4 0.125 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0 0 0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.25 0.25 0.25</size></box></geometry>
+          <material>
+            <ambient>0.2 0.8 0.2 1</ambient>
+            <diffuse>0.2 0.8 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="surrounding_wall_left">
+      <static>true</static>
+      <pose>0 5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>10 0.1 1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>10 0.1 1</size></box></geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="surrounding_wall_right">
+      <static>true</static>
+      <pose>0 -5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>10 0.1 1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>10 0.1 1</size></box></geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="surrounding_wall_back">
+      <static>true</static>
+      <pose>-5 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.1 10 1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 10 1</size></box></geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="surrounding_wall_front">
+      <static>true</static>
+      <pose>5 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.1 10 1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 10 1</size></box></geometry>
           <material>
             <ambient>0.8 0.2 0.2 1</ambient>
             <diffuse>0.8 0.2 0.2 1</diffuse>

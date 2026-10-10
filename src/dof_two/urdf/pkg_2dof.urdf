@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
-<robot name="dof_two">
+<robot name="dof_two" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg
+    name="controller_config"
+    default="$(find dof_two)/config/controllers.yaml"/>
 
   <!-- ========================================================= -->
   <!-- Root                                                        -->
@@ -354,6 +357,40 @@
     <mu2>0.8</mu2>
     <kp>1000000.0</kp>
     <kd>100.0</kd>
+  </gazebo>
+
+    <!-- ========================================================= -->
+  <!-- ros2_control interface for Gazebo Harmonic                 -->
+  <!-- ========================================================= -->
+
+  <ros2_control name="DofTwoSystem" type="system">
+
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+
+    <joint name="revolute_1">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="revolute_2">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+  </ros2_control>
+
+  <!-- Gazebo loads the ros2_control plugin -->
+  <gazebo>
+    <plugin
+      filename="libgz_ros2_control-system.so"
+      name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+
+      <parameters>$(arg controller_config)</parameters>
+    </plugin>
   </gazebo>
 
 </robot>
