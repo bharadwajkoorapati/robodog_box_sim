@@ -24,7 +24,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 20
 
-    # --- SLAM Map ---
+    # --- SLAM Map (will populate ~8-10s after launch) ---
     - Class: rviz_default_plugins/Map
       Enabled: true
       Name: Map
@@ -32,14 +32,11 @@ Visualization Manager:
         Value: /map
         Reliability Policy: Reliable
         Depth: 5
-      Update Topic:
-        Value: /map_updates
-        Reliability Policy: Reliable
       Color Scheme: map
       Draw Under: true
       Alpha: 0.7
 
-    # --- Global Costmap ---
+    # --- Global Costmap (populates after Nav2 is active ~16s) ---
     - Class: rviz_default_plugins/Map
       Enabled: true
       Name: Global Costmap
@@ -50,7 +47,7 @@ Visualization Manager:
       Alpha: 0.5
       Draw Under: false
 
-    # --- Local Costmap ---
+    # --- Local Costmap (populates after Nav2 is active ~16s) ---
     - Class: rviz_default_plugins/Map
       Enabled: true
       Name: Local Costmap
@@ -140,7 +137,7 @@ Visualization Manager:
       Size (m): 0.04
       Color: 255; 255; 0
 
-    # --- LiDAR Point Cloud ---
+    # --- LiDAR Point Cloud (disabled by default for performance) ---
     - Class: rviz_default_plugins/PointCloud2
       Enabled: false
       Name: PointCloud2
@@ -155,14 +152,15 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 30; 30; 35
-    Fixed Frame: map
+    # Fixed Frame is 'odom' so RViz works immediately.
+    # Manually change to 'map' in RViz once you see the map appear (~10s after launch).
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select
-    - Class: nav2_rviz_plugins/GoalTool
   Value: true
   Views:
     Current:

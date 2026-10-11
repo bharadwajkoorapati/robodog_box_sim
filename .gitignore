@@ -3,3 +3,4 @@
 /install
 /.vscode
 /.venv
+src/ultrasonic_box_bot/errors.log

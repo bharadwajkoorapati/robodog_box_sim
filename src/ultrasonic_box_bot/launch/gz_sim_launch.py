@@ -1,11 +1,22 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable, TimerAction
+from launch.actions import (
+    EmitEvent,
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+    SetEnvironmentVariable,
+    TimerAction,
+    LogInfo,
+)
+from launch.events import matches_action
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
-from launch_ros.actions import Node
+from launch_ros.actions import LifecycleNode, Node
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.event_handlers import OnStateTransition
+from launch_ros.events.lifecycle import ChangeState
+from lifecycle_msgs.msg import Transition
 
 # --- GPU Rendering (NVIDIA Offload) ---
 set_nv_offload = SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1')
@@ -14,8 +25,8 @@ set_no_sw     = SetEnvironmentVariable('LIBGL_ALWAYS_SOFTWARE', '0')
 
 
 def generate_launch_description():
-    pkg_share     = get_package_share_directory('ultrasonic_box_bot')
-    pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
+    pkg_share        = get_package_share_directory('ultrasonic_box_bot')
+    pkg_ros_gz_sim   = get_package_share_directory('ros_gz_sim')
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
 
     xacro_file       = os.path.join(pkg_share, 'urdf',   'ultrasonic_box_bot.urdf.xacro')
@@ -25,7 +36,7 @@ def generate_launch_description():
     nav2_params_file = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
 
     # -----------------------------------------------------------------------
-    # 1. Robot State Publisher
+    # 1. Robot State Publisher  (t = 0s)
     # -----------------------------------------------------------------------
     robot_description = ParameterValue(
         Command(['xacro ', xacro_file]), value_type=str
@@ -43,7 +54,7 @@ def generate_launch_description():
     )
 
     # -----------------------------------------------------------------------
-    # 2. Gazebo Harmonic Simulation
+    # 2. Gazebo Harmonic Simulation  (t = 0s)
     # -----------------------------------------------------------------------
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -53,7 +64,7 @@ def generate_launch_description():
     )
 
     # -----------------------------------------------------------------------
-    # 3. Spawn Robot into Gazebo
+    # 3. Spawn Robot into Gazebo  (t = 0s, ros_gz_sim create blocks until done)
     # -----------------------------------------------------------------------
     spawn_entity = Node(
         package='ros_gz_sim',
@@ -65,7 +76,7 @@ def generate_launch_description():
     )
 
     # -----------------------------------------------------------------------
-    # 4. ROS-GZ Bridge
+    # 4. ROS-GZ Bridge  (t = 0s)
     # -----------------------------------------------------------------------
     bridge = Node(
         package='ros_gz_bridge',
@@ -90,7 +101,7 @@ def generate_launch_description():
     )
 
     # -----------------------------------------------------------------------
-    # 5. Target Cube Publisher (ground-truth static pose)
+    # 5. Target Cube Publisher  (t = 0s)
     # -----------------------------------------------------------------------
     target_cube_publisher = Node(
         package='ultrasonic_box_bot',
@@ -101,25 +112,51 @@ def generate_launch_description():
     )
 
     # -----------------------------------------------------------------------
-    # 6. SLAM Toolbox – Online Async Mapping
-    #    Publishes: /map (nav_msgs/msg/OccupancyGrid)
-    #               /map_metadata
-    #               TF: map -> odom (indirectly through slam)
+    # 6. SLAM Toolbox lifecycle node
+    #    It must be configured and activated before it subscribes to /scan or
+    #    publishes /map and map→odom.  Start the process now, then configure
+    #    it after the Gazebo bridge has established the sensor/TF streams.
     # -----------------------------------------------------------------------
-    slam_toolbox = Node(
+    slam_toolbox_node = LifecycleNode(
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
         name='slam_toolbox',
+        namespace='',
         output='screen',
         parameters=[
             slam_params_file,
-            {'use_sim_time': True},
+            {'use_sim_time': True, 'use_lifecycle_manager': False},
         ],
     )
 
+    configure_slam_toolbox = TimerAction(
+        period=8.0,
+        actions=[
+            LogInfo(msg='[LAUNCH] Configuring SLAM Toolbox (t+8s)...'),
+            EmitEvent(event=ChangeState(
+                lifecycle_node_matcher=matches_action(slam_toolbox_node),
+                transition_id=Transition.TRANSITION_CONFIGURE,
+            )),
+        ]
+    )
+
+    activate_slam_toolbox = RegisterEventHandler(
+        OnStateTransition(
+            target_lifecycle_node=slam_toolbox_node,
+            start_state='configuring',
+            goal_state='inactive',
+            entities=[
+                LogInfo(msg='[LAUNCH] Activating SLAM Toolbox...'),
+                EmitEvent(event=ChangeState(
+                    lifecycle_node_matcher=matches_action(slam_toolbox_node),
+                    transition_id=Transition.TRANSITION_ACTIVATE,
+                )),
+            ],
+        )
+    )
+
     # -----------------------------------------------------------------------
-    # 7. Nav2 Bringup – Delayed 5s to let SLAM initialize first
-    #    Provides: AMCL, costmaps, planner, controller, bt_navigator
+    # 7. Nav2 Bringup – delayed 16s to let SLAM establish map→odom TF first
     # -----------------------------------------------------------------------
     nav2_bringup = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -133,12 +170,15 @@ def generate_launch_description():
     )
 
     nav2_bringup_delayed = TimerAction(
-        period=5.0,
-        actions=[nav2_bringup]
+        period=16.0,
+        actions=[
+            LogInfo(msg='[LAUNCH] Starting Nav2 stack (t+16s)...'),
+            nav2_bringup,
+        ]
     )
 
     # -----------------------------------------------------------------------
-    # 8. RViz2
+    # 8. RViz2  (t = 0s, starts in odom frame then switches to map once ready)
     # -----------------------------------------------------------------------
     rviz2 = Node(
         package='rviz2',
@@ -161,7 +201,9 @@ def generate_launch_description():
         spawn_entity,
         bridge,
         target_cube_publisher,
-        slam_toolbox,
-        nav2_bringup_delayed,
+        slam_toolbox_node,
+        activate_slam_toolbox,
+        configure_slam_toolbox,  # +8s
+        nav2_bringup_delayed,    # +16s
         rviz2,
     ])
