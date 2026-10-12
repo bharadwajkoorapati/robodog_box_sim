@@ -4,3 +4,4 @@
 /.vscode
 /.venv
 src/ultrasonic_box_bot/errors.log
+src/ultrasonic_box_bot/learnings.md

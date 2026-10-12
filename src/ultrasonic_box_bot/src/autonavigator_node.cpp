@@ -43,11 +43,15 @@ public:
     robot_yaw_(0.0),
     has_odom_(false),
     has_target_(false),
+    has_front_(false), 
+    has_left_(false), 
+    has_right_(false),
     state_start_time_(this->now())
   {
     // Publishers
-    cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
-
+    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
+      this->get_parameter("cmd_vel_topic").as_string(), 10);
     // Subscribers
     us_front_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       "/us_front", 10,
@@ -77,7 +81,7 @@ public:
   }
 
 private:
-  float extract_min_range(const sensor_msgs::msg::LaserScan::SharedPtr & msg)
+  float extract_min_range(const sensor_msgs::msg::LaserScan::ConstSharedPtr & msg)
   {
     float min_r = 10.0f;
     for (float r : msg->ranges) {
@@ -90,22 +94,14 @@ private:
     return min_r;
   }
 
-  void front_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
-  {
-    front_dist_ = extract_min_range(msg);
-  }
+  void front_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
+  { front_dist_ = extract_min_range(msg); has_front_ = true; }
+  void left_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
+  { left_dist_ = extract_min_range(msg); has_left_ = true; }
+  void right_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
+  { right_dist_ = extract_min_range(msg); has_right_ = true; }
 
-  void left_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
-  {
-    left_dist_ = extract_min_range(msg);
-  }
-
-  void right_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
-  {
-    right_dist_ = extract_min_range(msg);
-  }
-
-  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+  void odom_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
   {
     robot_x_ = msg->pose.pose.position.x;
     robot_y_ = msg->pose.pose.position.y;
@@ -118,7 +114,7 @@ private:
     has_odom_ = true;
   }
 
-  void target_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+  void target_callback(const geometry_msgs::msg::PoseStamped::ConstSharedPtr msg)
   {
     target_pos_ = msg->pose.position;
     has_target_ = true;
@@ -142,7 +138,11 @@ private:
 
   void control_loop()
   {
-    if (!has_odom_) {
+    if (!has_odom_ || !has_front_ || !has_left_ || !has_right_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+        "Waiting for odom and ultrasonic data (odom=%d F=%d L=%d R=%d)",
+        has_odom_, has_front_, has_left_, has_right_);
+      cmd_vel_pub_->publish(geometry_msgs::msg::Twist());
       return;
     }
 
@@ -379,6 +379,7 @@ private:
 
   bool has_odom_;
   bool has_target_;
+  bool has_front_, has_left_, has_right_;
   geometry_msgs::msg::Point target_pos_;
   rclcpp::Time state_start_time_;
 

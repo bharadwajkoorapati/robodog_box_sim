@@ -19,9 +19,7 @@
   <xacro:property name="us_radius" value="0.008"/>
   <xacro:property name="us_range_min" value="0.02"/>
   <xacro:property name="us_range_max" value="4.0"/>
-  <xacro:property name="us_fov" value="0.26"/>
-  <xacro:property name="lidar_fov" value="3.14159"/>
-  <xacro:property name="lidar_range_max" value="7.0"/>
+  <xacro:property name="us_fov" value="0.5235987756"/>
 
   <material name="grey">
     <color rgba="0.6 0.6 0.6 1.0"/>
@@ -45,9 +43,9 @@
     </inertial>
   </xacro:macro>
 
-  <xacro:macro name="cylinder_inertia" params="mass r h">
+  <xacro:macro name="cylinder_inertia" params="mass r h rpy:='0 0 0'">
     <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="${rpy}"/>
       <mass value="${mass}"/>
       <inertia
         ixx="${mass/12.0*(3*r*r+h*h)}" ixy="0.0" ixz="0.0"
@@ -106,7 +104,7 @@
           <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
         </geometry>
       </collision>
-      <xacro:cylinder_inertia mass="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}"/>
+      <xacro:cylinder_inertia mass="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}" rpy="1.5708 0 0"/>
     </link>
 
     <joint name="${prefix}_wheel_joint" type="continuous">
@@ -200,6 +198,7 @@
       <sensor name="${name}" type="gpu_lidar">
         <pose>0 0 0 0 0 0</pose>
         <topic>${name}</topic>
+        <gz_frame_id>${name}_link</gz_frame_id>
         <update_rate>10</update_rate>
         <always_on>true</always_on>
         <visualize>true</visualize>
@@ -208,8 +207,8 @@
             <horizontal>
               <samples>5</samples>
               <resolution>1</resolution>
-              <min_angle>-${lidar_fov/2.0}</min_angle>
-              <max_angle>${lidar_fov/2.0}</max_angle>
+              <min_angle>${-us_fov/2.0}</min_angle>
+              <max_angle>${us_fov/2.0}</max_angle>
             </horizontal>
             <vertical>
               <samples>1</samples>
@@ -220,7 +219,7 @@
           </scan>
           <range>
             <min>${us_range_min}</min>
-            <max>${lidar_range_max}</max>
+            <max>${us_range_max}</max>
             <resolution>0.01</resolution>
           </range>
         </lidar>

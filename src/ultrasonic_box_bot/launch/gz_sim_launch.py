@@ -17,6 +17,9 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.event_handlers import OnStateTransition
 from launch_ros.events.lifecycle import ChangeState
 from lifecycle_msgs.msg import Transition
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import Command, LaunchConfiguration
 
 # --- GPU Rendering (NVIDIA Offload) ---
 set_nv_offload = SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1')
@@ -28,6 +31,11 @@ def generate_launch_description():
     pkg_share        = get_package_share_directory('ultrasonic_box_bot')
     pkg_ros_gz_sim   = get_package_share_directory('ros_gz_sim')
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
+    use_autonav = LaunchConfiguration('use_autonav')
+    use_autonav_arg = DeclareLaunchArgument(
+        'use_autonav',
+        default_value='false',
+    )
 
     xacro_file       = os.path.join(pkg_share, 'urdf',   'ultrasonic_box_bot.urdf.xacro')
     world_file       = os.path.join(pkg_share, 'worlds', 'empty_us_world.sdf')
@@ -159,22 +167,26 @@ def generate_launch_description():
     # 7. Nav2 Bringup – delayed 16s to let SLAM establish map→odom TF first
     # -----------------------------------------------------------------------
     nav2_bringup = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')
-        ),
-        launch_arguments={
-            'use_sim_time': 'true',
-            'params_file':  nav2_params_file,
-            'autostart':    'true',
-        }.items()
+    PythonLaunchDescriptionSource(
+        os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')),
+    launch_arguments={
+        'use_sim_time': 'true',
+        'params_file': nav2_params_file,
+        'autostart': 'true',
+    }.items(),
+    condition=UnlessCondition(use_autonav),
     )
 
-    nav2_bringup_delayed = TimerAction(
-        period=16.0,
-        actions=[
-            LogInfo(msg='[LAUNCH] Starting Nav2 stack (t+16s)...'),
-            nav2_bringup,
-        ]
+    start_nav2_when_slam_active = RegisterEventHandler(
+        OnStateTransition(
+            target_lifecycle_node=slam_toolbox_node,
+            start_state='activating',
+            goal_state='active',
+            entities=[
+                LogInfo(msg='[LAUNCH] SLAM active -> starting Nav2 in 3s'),
+                TimerAction(period=3.0, actions=[nav2_bringup]),
+            ],
+        )
     )
 
     # -----------------------------------------------------------------------
@@ -189,21 +201,25 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
 
+    autonavigator = Node(
+        package='ultrasonic_box_bot',
+        executable='autonavigator_node',
+        name='autonavigator_node',
+        output='screen',
+        condition=IfCondition(use_autonav),
+        parameters=[{'use_sim_time': True, 'cmd_vel_topic': '/cmd_vel'}],
+    )    
+
     # -----------------------------------------------------------------------
     # Launch Ordering
     # -----------------------------------------------------------------------
     return LaunchDescription([
-        set_nv_offload,
-        set_glx_vendor,
-        set_no_sw,
-        robot_state_publisher,
-        gz_sim,
-        spawn_entity,
-        bridge,
-        target_cube_publisher,
-        slam_toolbox_node,
-        activate_slam_toolbox,
-        configure_slam_toolbox,  # +8s
-        nav2_bringup_delayed,    # +16s
-        rviz2,
+    use_autonav_arg,
+    set_nv_offload, set_glx_vendor, set_no_sw,
+    robot_state_publisher, gz_sim, spawn_entity, bridge,
+    target_cube_publisher,
+    slam_toolbox_node, activate_slam_toolbox, configure_slam_toolbox,
+    start_nav2_when_slam_active,
+    autonavigator,
+    rviz2,
     ])
