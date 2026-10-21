@@ -14,7 +14,9 @@ amcl:
     global_frame_id: "map"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
-    laser_max_range: 10.0
+    # Slightly below the sensor's 10 m so max-range returns are not treated as
+    # free space.
+    laser_max_range: 9.0
     laser_min_range: 0.08
     laser_model_type: "likelihood_field"
     max_beams: 60
@@ -38,6 +40,19 @@ amcl:
     z_rand: 0.5
     z_short: 0.05
     scan_topic: scan
+    # Localization mode needs an initial pose before AMCL will publish
+    # map -> odom.  The robot always spawns at the arena origin, so seed it here
+    # instead of stopping the whole launch until someone clicks in RViz.
+    # Override / re-seed with the "2D Pose Estimate" tool whenever the spawn
+    # pose or the map origin differ.
+    set_initial_pose: true
+    always_reset_initial_pose: false
+    first_map_only: false
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      yaw: 0.0
 
 bt_navigator:
   ros__parameters:
@@ -116,57 +131,23 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_footprint
       rolling_window: true
-      width: 3
-      height: 3
+      # 4 m instead of 3 m: the lookahead reaches 0.9 m, so a 3 m window left
+      # almost no room in front of the robot and the costmap appeared to lose
+      # the walls it had just seen.
+      width: 4
+      height: 4
       resolution: 0.05
       robot_radius: 0.25
-      transform_tolerance: 5.0
-      plugins: ["voxel_layer", "inflation_layer"]
+      # 5.0 s let the costmap use a stale robot pose (visible as the rolling
+      # window lagging the robot); 0.3 s is the Nav2 default.
+      transform_tolerance: 0.3
+      # A 2D laser does not need a voxel grid; the ObstacleLayer is cheaper and
+      # avoids the extra voxel publication that showed up as flicker.
+      plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: scan
-        scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
-      static_layer:
-        plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: True
-      always_send_full_costmap: True
-
-global_costmap:
-  global_costmap:
-    ros__parameters:
-      use_sim_time: true
-      update_frequency: 1.0
-      publish_frequency: 1.0
-      global_frame: map
-      robot_base_frame: base_footprint
-      rolling_window: true
-      width: 20
-      height: 20
-      resolution: 0.05
-      robot_radius: 0.25
-      track_unknown_space: true
-      transform_tolerance: 5.0
-      plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -181,11 +162,66 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
+      always_send_full_costmap: False
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 2.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_footprint
+      # The static map defines the planning bounds and is not re-centred on the
+      # robot.  It is fed from /map_padded, not /map: map_padder republishes the
+      # SLAM map inside a fixed arena window, so
+      #   * a goal in a not-yet-explored part of the arena is inside the
+      #     costmap instead of failing with "outside bounds", and
+      #   * the StaticLayer stops resizing the costmap every time SLAM grows
+      #     the map, which is what made the costmap glitch and lose its bounds.
+      rolling_window: false
+      width: 12
+      height: 12
+      # Without a static map yet (the first seconds of a blind run) the costmap
+      # spans [origin, origin + size], so it must be centred on the arena rather
+      # than defaulting to (0, 0) and covering only the +x/+y quadrant.
+      origin_x: -6.0
+      origin_y: -6.0
+      resolution: 0.05
+      robot_radius: 0.25
+      track_unknown_space: true
+      transform_tolerance: 0.5
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_topic: /map_padded
+        map_subscribe_transient_local: True
+        subscribe_to_updates: True
+        # Clears the robot footprint in the static grid, so a small pose error
+        # while driving close to a wall does not make the start cell lethal.
+        footprint_clearing_enabled: True
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          # The LiDAR sees 10 m; the walls of the 10 x 10 m arena are therefore
+          # known well before the robot reaches them, so the global plan goes
+          # around them instead of through a wall only marked at 2.5 m.
+          raytrace_max_range: 10.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 8.0
+          obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
-      always_send_full_costmap: True
+      always_send_full_costmap: False
 
 map_server:
   ros__parameters:
@@ -203,7 +239,10 @@ map_saver:
 planner_server:
   ros__parameters:
     use_sim_time: true
-    expected_planner_frequency: 20.0
+    # 20 Hz is unreachable for NavFn on a 240 x 240 costmap and only produced
+    # "Planner loop missed its desired rate" warnings; the BT requests plans on
+    # demand anyway.
+    expected_planner_frequency: 5.0
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner::NavfnPlanner"

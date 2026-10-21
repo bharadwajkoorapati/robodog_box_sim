@@ -9,7 +9,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     pkg_share = get_package_share_directory('ultrasonic_box_bot')
     xacro_file = os.path.join(pkg_share, 'urdf', 'ultrasonic_box_bot.urdf.xacro')
-    rviz_config = os.path.join(pkg_share, 'rviz', 'view_bot.rviz')
+    rviz_config = os.path.join(pkg_share, 'rviz', 'view_bot_rviz_config.rviz')
 
     robot_description = ParameterValue(
         Command(['xacro ', xacro_file]), value_type=str
@@ -21,7 +21,7 @@ def generate_launch_description():
             executable='robot_state_publisher',
             name='robot_state_publisher',
             output='screen',
-            parameters=[{'robot_description': robot_description}]
+            parameters=[{'robot_description': robot_description, 'use_sim_time': True}]
         ),
         Node(
             package='joint_state_publisher_gui',
@@ -34,6 +34,7 @@ def generate_launch_description():
             executable='rviz2',
             name='rviz2',
             output='screen',
-            arguments=['-d', rviz_config]
+            arguments=['-d', rviz_config],
+            parameters=[{'use_sim_time': True}]
         ),
     ])

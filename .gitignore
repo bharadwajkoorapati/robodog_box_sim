@@ -5,3 +5,7 @@
 /.venv
 src/ultrasonic_box_bot/errors.log
 src/ultrasonic_box_bot/learnings.md
+src/learningsv2.md
+src/.freebuff/project-id
+src/ultrasonic_box_bot/CHANGES.md
+src/ultrasonic_box_bot/codebase.md

@@ -306,7 +306,10 @@
       <wheel_separation>${wheel_separation}</wheel_separation>
       <wheel_radius>${wheel_radius}</wheel_radius>
       <odom_publish_frequency>20</odom_publish_frequency>
-      <topic>cmd_vel</topic>
+      <!-- Command topic matches the ROS topic name because ros_gz_bridge uses
+           one name for both sides. /cmd_vel_safe is the watchdog output, so
+           Gazebo and ROS can never disagree about who owns the velocity. -->
+      <topic>cmd_vel_safe</topic>
       <odom_topic>odom</odom_topic>
       <tf_topic>tf</tf_topic>
       <frame_id>odom</frame_id>

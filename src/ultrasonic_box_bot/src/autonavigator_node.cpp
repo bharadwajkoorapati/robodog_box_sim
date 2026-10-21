@@ -46,23 +46,33 @@ public:
     has_front_(false), 
     has_left_(false), 
     has_right_(false),
-    state_start_time_(this->now())
+    state_start_time_(this->now()),
+    last_odom_time_(this->now()),
+    last_front_time_(this->now()),
+    last_left_time_(this->now()),
+    last_right_time_(this->now())
   {
     // Publishers
-    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    cmd_vel_topic_ = this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    data_timeout_sec_ = this->declare_parameter<double>("data_timeout_sec", 0.5);
+    emergency_stop_distance_ = this->declare_parameter<double>("emergency_stop_distance", 0.22);
+    target_frame_ = this->declare_parameter<std::string>("target_frame", "odom");
+
     cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
-      this->get_parameter("cmd_vel_topic").as_string(), 10);
-    // Subscribers
+      cmd_vel_topic_, 10);
+
+    // Sensor data uses SensorDataQoS (best effort) to match the bridge/telemetry
+    // QoS conventions; a reliable subscriber would back-pressure a fast sensor.
     us_front_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      "/us_front", 10,
+      "/us_front", rclcpp::SensorDataQoS(),
       std::bind(&AutonavigatorNode::front_callback, this, std::placeholders::_1));
 
     us_left_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      "/us_left", 10,
+      "/us_left", rclcpp::SensorDataQoS(),
       std::bind(&AutonavigatorNode::left_callback, this, std::placeholders::_1));
 
     us_right_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      "/us_right", 10,
+      "/us_right", rclcpp::SensorDataQoS(),
       std::bind(&AutonavigatorNode::right_callback, this, std::placeholders::_1));
 
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -95,11 +105,11 @@ private:
   }
 
   void front_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
-  { front_dist_ = extract_min_range(msg); has_front_ = true; }
+  { front_dist_ = extract_min_range(msg); has_front_ = true; last_front_time_ = this->now(); }
   void left_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
-  { left_dist_ = extract_min_range(msg); has_left_ = true; }
+  { left_dist_ = extract_min_range(msg); has_left_ = true; last_left_time_ = this->now(); }
   void right_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
-  { right_dist_ = extract_min_range(msg); has_right_ = true; }
+  { right_dist_ = extract_min_range(msg); has_right_ = true; last_right_time_ = this->now(); }
 
   void odom_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
   {
@@ -112,12 +122,37 @@ private:
     robot_yaw_ = std::atan2(siny_cosp, cosy_cosp);
 
     has_odom_ = true;
+    last_odom_time_ = this->now();
   }
 
   void target_callback(const geometry_msgs::msg::PoseStamped::ConstSharedPtr msg)
   {
+    // This FSM only ever compares the target against odometry coordinates, so a
+    // target expressed in another frame (e.g. `map`) would be silently wrong.
+    if (!msg->header.frame_id.empty() && msg->header.frame_id != target_frame_) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 5000,
+        "Ignoring target in frame '%s'; the navigator needs '%s'. "
+        "Use target_nav2_client for map-frame goals.",
+        msg->header.frame_id.c_str(), target_frame_.c_str());
+      has_target_ = false;
+      return;
+    }
+
     target_pos_ = msg->pose.position;
     has_target_ = true;
+  }
+
+  // Age of a stamp in the node clock.  A negative age means the simulated
+  // clock was reset (or has not started); treat that as fresh instead of
+  // stalling forever on a negative duration.
+  double data_age_sec(const rclcpp::Time & stamp) const
+  {
+    const rclcpp::Time now = this->now();
+    if (now < stamp) {
+      return 0.0;
+    }
+    return (now - stamp).seconds();
   }
 
   double angle_diff(double target, double current)
@@ -142,6 +177,20 @@ private:
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
         "Waiting for odom and ultrasonic data (odom=%d F=%d L=%d R=%d)",
         has_odom_, has_front_, has_left_, has_right_);
+      cmd_vel_pub_->publish(geometry_msgs::msg::Twist());
+      return;
+    }
+
+    // A single stale stream means the world model is no longer trustworthy:
+    // stop rather than drive on an old reading.  `has_*` only says a message
+    // ever arrived, which is why the age check is separate.
+    const double worst_age = std::max(
+      {data_age_sec(last_odom_time_), data_age_sec(last_front_time_),
+        data_age_sec(last_left_time_), data_age_sec(last_right_time_)});
+    if (data_timeout_sec_ > 0.0 && worst_age > data_timeout_sec_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+        "Stale sensor data (%.2f s old, limit %.2f s): stopping",
+        worst_age, data_timeout_sec_);
       cmd_vel_pub_->publish(geometry_msgs::msg::Twist());
       return;
     }
@@ -204,7 +253,7 @@ private:
       // Short advance to clear corner 1
       case NavState::CLEAR_CORNER_1:
       {
-        auto elapsed = (this->now() - state_start_time_).seconds();
+        auto elapsed = state_elapsed_sec();
         if (elapsed > 1.6) {
           transition_to(NavState::TURN_LEFT_GAP_1, "TURN_LEFT_GAP_1");
         } else {
@@ -278,7 +327,7 @@ private:
       // Short advance to clear corner 2
       case NavState::CLEAR_CORNER_2:
       {
-        auto elapsed = (this->now() - state_start_time_).seconds();
+        auto elapsed = state_elapsed_sec();
         if (elapsed > 1.6) {
           transition_to(NavState::TURN_RIGHT_GAP_2, "TURN_RIGHT_GAP_2");
         } else {
@@ -364,7 +413,29 @@ private:
       }
     }
 
+    // Safety reflex: a forward command with an obstacle inside the emergency
+    // band is overridden.  The angular component is kept so the robot can still
+    // rotate away from the obstacle.
+    if (emergency_stop_distance_ > 0.0 && cmd.linear.x > 0.0 &&
+      front_dist_ < emergency_stop_distance_)
+    {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+        "Emergency stop: front range %.2f m below %.2f m",
+        front_dist_, emergency_stop_distance_);
+      cmd.linear.x = 0.0;
+    }
+
     cmd_vel_pub_->publish(cmd);
+  }
+
+  double state_elapsed_sec()
+  {
+    // Guard against a clock reset mid-run (sim time restarted at 0).
+    if (this->now() < state_start_time_) {
+      state_start_time_ = this->now();
+      return 0.0;
+    }
+    return (this->now() - state_start_time_).seconds();
   }
 
   // Node members
@@ -382,6 +453,16 @@ private:
   bool has_front_, has_left_, has_right_;
   geometry_msgs::msg::Point target_pos_;
   rclcpp::Time state_start_time_;
+
+  rclcpp::Time last_odom_time_;
+  rclcpp::Time last_front_time_;
+  rclcpp::Time last_left_time_;
+  rclcpp::Time last_right_time_;
+
+  std::string cmd_vel_topic_;
+  std::string target_frame_;
+  double data_timeout_sec_;
+  double emergency_stop_distance_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr us_front_sub_;

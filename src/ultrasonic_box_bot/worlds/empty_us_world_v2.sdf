@@ -15,31 +15,31 @@
       <input type='gz.msgs.Int32' topic='/keyboard/keypress'>
         <match field='data'>87</match>
       </input>
-      <output type='gz.msgs.Twist' topic='/cmd_vel'>linear: {x: 0.5}, angular: {z: 0.0}</output>
+      <output type='gz.msgs.Twist' topic='/cmd_vel_safe'>linear: {x: 0.5}, angular: {z: 0.0}</output>
     </plugin>
     <plugin name='gz::sim::systems::TriggeredPublisher' filename='gz-sim-triggered-publisher-system'>
       <input type='gz.msgs.Int32' topic='/keyboard/keypress'>
         <match field='data'>83</match>
       </input>
-      <output type='gz.msgs.Twist' topic='/cmd_vel'>linear: {x: -0.5}, angular: {z: 0.0}</output>
+      <output type='gz.msgs.Twist' topic='/cmd_vel_safe'>linear: {x: -0.5}, angular: {z: 0.0}</output>
     </plugin>
     <plugin name='gz::sim::systems::TriggeredPublisher' filename='gz-sim-triggered-publisher-system'>
       <input type='gz.msgs.Int32' topic='/keyboard/keypress'>
         <match field='data'>65</match>
       </input>
-      <output type='gz.msgs.Twist' topic='/cmd_vel'>linear: {x: 0.0}, angular: {z: 0.5}</output>
+      <output type='gz.msgs.Twist' topic='/cmd_vel_safe'>linear: {x: 0.0}, angular: {z: 0.5}</output>
     </plugin>
     <plugin name='gz::sim::systems::TriggeredPublisher' filename='gz-sim-triggered-publisher-system'>
       <input type='gz.msgs.Int32' topic='/keyboard/keypress'>
         <match field='data'>68</match>
       </input>
-      <output type='gz.msgs.Twist' topic='/cmd_vel'>linear: {x: 0.0}, angular: {z: -0.5}</output>
+      <output type='gz.msgs.Twist' topic='/cmd_vel_safe'>linear: {x: 0.0}, angular: {z: -0.5}</output>
     </plugin>
     <plugin name='gz::sim::systems::TriggeredPublisher' filename='gz-sim-triggered-publisher-system'>
       <input type='gz.msgs.Int32' topic='/keyboard/keypress'>
         <match field='data'>32</match>
       </input>
-      <output type='gz.msgs.Twist' topic='/cmd_vel'>linear: {x: 0.0}, angular: {z: 0.0}</output>
+      <output type='gz.msgs.Twist' topic='/cmd_vel_safe'>linear: {x: 0.0}, angular: {z: 0.0}</output>
     </plugin>
     <gravity>0 0 -9.8000000000000007</gravity>
     <magnetic_field>5.5644999999999998e-06 2.2875799999999999e-05 -4.2388400000000002e-05</magnetic_field>

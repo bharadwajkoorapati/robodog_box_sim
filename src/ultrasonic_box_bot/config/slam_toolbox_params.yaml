@@ -20,8 +20,9 @@ slam_toolbox:
     use_map_saver: true
     debug_logging: false
     throttle_scans: 1
+    scan_queue_size: 10              # Buffer scans while TF catches up instead of dropping them (default 1)
     transform_publish_period: 0.02   # seconds between map->odom TF publishes
-    map_update_interval: 3.0         # seconds between map image updates (lower = more responsive)
+    map_update_interval: 1.0         # seconds between map updates; keeps /map fresh for RViz and the global costmap
     resolution: 0.05                 # meters per cell (5 cm)
     restamp_tf: true             # Fixes sim-time TF stamp mismatches on startup
     transform_timeout: 1.0
@@ -34,20 +35,27 @@ slam_toolbox:
     minimum_time_interval: 0.3
 
     # --- Interactive Mode ---
-    enable_interactive_mode: true
+    # Disabled: the RViz interactive markers are not used, and enabling them adds
+    # a service dependency that fails noisily in headless runs.
+    enable_interactive_mode: false
 
     # --- Scan Matching ---
     use_scan_matching: true
     use_scan_barycenter: true
-    minimum_travel_distance: 0.3
-    minimum_travel_heading: 0.3
+    minimum_travel_distance: 0.2
+    minimum_travel_heading: 0.2
     check_min_dist_and_heading_precisely: false
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0
-    link_match_minimum_response_fine: 0.1
-    link_scan_maximum_distance: 1.5
+    # 0.1 accepted almost any scan match, so a single bad match could relocate
+    # the robot in the map (the pose "forgetting where it is" mid-drive, followed
+    # by planner failures from coordinates inside a wall).  Keep it strict.
+    link_match_minimum_response_fine: 0.35
+    link_scan_maximum_distance: 1.0
+    # Loop closure is a global map rewrite; in a 10 x 10 m arena the drift it
+    # would correct is small, while a wrong closure teleports map -> odom.  Off.
+    do_loop_closing: false
     loop_search_maximum_distance: 3.0
-    do_loop_closing: true
     loop_match_minimum_chain_size: 10
     loop_match_maximum_variance_coarse: 3.0
     loop_match_minimum_response_coarse: 0.35
