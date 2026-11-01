@@ -9,3 +9,10 @@ src/learningsv2.md
 src/.freebuff/project-id
 src/ultrasonic_box_bot/CHANGES.md
 src/ultrasonic_box_bot/codebase.md
+/src/ultrasonic_box_bot/log
+errordock.txt
+future.txt
+src/ultrasonic_box_bot/build/.built_by
+src/ultrasonic_box_bot/build/ultrasonic_box_bot/colcon_test.rc
+.gitignore
+src/ultrasonic_box_bot/firmware/CAS_source_TEAM6.ino

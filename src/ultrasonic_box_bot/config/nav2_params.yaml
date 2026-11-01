@@ -151,7 +151,7 @@ local_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan
+        observation_sources: scan us_front us_back us_left us_right
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -162,6 +162,46 @@ local_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
+        us_front:
+          topic: /us_front
+          max_obstacle_height: 1.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 2.0
+          raytrace_min_range: 0.02
+          obstacle_max_range: 1.5
+          obstacle_min_range: 0.02
+        us_back:
+          topic: /us_back
+          max_obstacle_height: 1.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 2.0
+          raytrace_min_range: 0.02
+          obstacle_max_range: 1.5
+          obstacle_min_range: 0.02
+        us_left:
+          topic: /us_left
+          max_obstacle_height: 1.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 2.0
+          raytrace_min_range: 0.02
+          obstacle_max_range: 1.5
+          obstacle_min_range: 0.02
+        us_right:
+          topic: /us_right
+          max_obstacle_height: 1.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 2.0
+          raytrace_min_range: 0.02
+          obstacle_max_range: 1.5
+          obstacle_min_range: 0.02
       always_send_full_costmap: False
 
 global_costmap:
@@ -337,12 +377,36 @@ collision_monitor:
       min_points: 6
       visualize: False
       enabled: True
-    observation_sources: ["scan"]
+    observation_sources: ["scan", "us_front", "us_back", "us_left", "us_right"]
     scan:
       type: "scan"
-      topic: "scan"
+      topic: "/scan"
       min_height: 0.15
       max_height: 2.0
+      enabled: True
+    us_front:
+      type: "scan"
+      topic: "/us_front"
+      min_height: 0.01
+      max_height: 1.0
+      enabled: True
+    us_back:
+      type: "scan"
+      topic: "/us_back"
+      min_height: 0.01
+      max_height: 1.0
+      enabled: True
+    us_left:
+      type: "scan"
+      topic: "/us_left"
+      min_height: 0.01
+      max_height: 1.0
+      enabled: True
+    us_right:
+      type: "scan"
+      topic: "/us_right"
+      min_height: 0.01
+      max_height: 1.0
       enabled: True
 
 slam_toolbox:

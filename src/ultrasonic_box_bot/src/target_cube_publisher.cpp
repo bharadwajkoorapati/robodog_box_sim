@@ -10,7 +10,7 @@ class TargetCubePublisher : public rclcpp::Node
 public:
   TargetCubePublisher() : Node("target_cube_publisher")
   {
-    // Declare parameters with default coordinates matching empty_us_world.sdf
+    // Declare parameters with default coordinates matching slam_world.sdf
     this->declare_parameter<double>("target_x", 4.0);
     this->declare_parameter<double>("target_y", -4.0);
     this->declare_parameter<double>("target_z", 0.125);

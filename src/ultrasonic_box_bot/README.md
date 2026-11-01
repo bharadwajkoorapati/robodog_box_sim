@@ -55,8 +55,7 @@ ultrasonic_box_bot/
 ├── urdf/
 │   └── ultrasonic_box_bot.urdf.xacro # Robot description and sensors
 ├── worlds/
-│   ├── empty_us_world.sdf      # Main world (maze walls + target cube)
-│   └── empty_us_world_v2.sdf   # Secondary world layout
+│   └── slam_world.sdf          # Main world (maze walls + target cube)
 ├── src/
 │   ├── autonavigator_node.cpp    # Ultrasonic wall-following FSM
 │   ├── target_cube_publisher.cpp # Ground-truth target pose publisher

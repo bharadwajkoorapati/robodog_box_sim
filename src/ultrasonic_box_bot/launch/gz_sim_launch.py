@@ -142,7 +142,7 @@ def generate_launch_description():
     )
 
     xacro_file = os.path.join(pkg_share, 'urdf', 'ultrasonic_box_bot.urdf.xacro')
-    world_file = os.path.join(pkg_share, 'worlds', 'empty_us_world.sdf')
+    world_file = os.path.join(pkg_share, 'worlds', 'slam_world.sdf')
     rviz_config = os.path.join(pkg_share, 'rviz', 'view_bot_rviz_config.rviz')
     slam_params_file = os.path.join(pkg_share, 'config', 'slam_toolbox_params.yaml')
     nav2_params_file = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
@@ -213,10 +213,10 @@ def generate_launch_description():
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-            '/world/empty_us_world/model/ultrasonic_box_bot/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
+            '/world/slam_world/model/ultrasonic_box_bot/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
         ],
         remappings=[
-            ('/world/empty_us_world/model/ultrasonic_box_bot/joint_state', '/joint_states'),
+            ('/world/slam_world/model/ultrasonic_box_bot/joint_state', '/joint_states'),
         ],
         output='screen'
     )
