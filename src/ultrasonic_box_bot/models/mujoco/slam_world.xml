@@ -1,0 +1,46 @@
+<mujoco model="slam_world">
+  <!-- MuJoCo equivalent of slam_world.sdf for ultrasonic_box_bot SLAM & Nav2 -->
+  <compiler angle="radian" coordinate="local"/>
+  <option timestep="0.005" gravity="0 0 -9.81" integrator="implicitfast"/>
+
+  <visual>
+    <headlight ambient="0.5 0.5 0.5" diffuse="0.5 0.5 0.5" specular="0.1 0.1 0.1"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="384"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.7 0.7 0.7" rgb2="0.6 0.6 0.6" width="512" height="512"/>
+    <material name="grid_mat" texture="grid" texrepeat="25 25" reflectance="0.2"/>
+    <material name="wall_mat" rgba="0.8 0.2 0.2 1.0"/>
+    <material name="target_mat" rgba="0.2 0.8 0.2 1.0"/>
+  </asset>
+
+  <!-- Include Robot Model -->
+  <include file="ultrasonic_box_bot.xml"/>
+
+  <worldbody>
+    <light directional="true" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2" pos="0 0 10" dir="-0.5 0.1 -0.9"/>
+
+    <!-- Ground Plane (50m x 50m) -->
+    <geom name="ground_plane" type="plane" size="25 25 0.1" material="grid_mat" friction="1.2 0.005 0.0001"/>
+
+    <!-- Internal Maze Obstacle Wall 1: length 8m along Y, thickness 0.1m, height 1m at (1, 1, 0.5) -->
+    <geom name="maze_wall_1" type="box" size="0.05 4.0 0.5" pos="1.0 1.0 0.5" material="wall_mat"/>
+
+    <!-- Internal Maze Obstacle Wall 2: length 8m along Y, thickness 0.1m, height 1m at (3, -1, 0.5) -->
+    <geom name="maze_wall_2" type="box" size="0.05 4.0 0.5" pos="3.0 -1.0 0.5" material="wall_mat"/>
+
+    <!-- Surrounding Arena Boundary: 10m x 10m arena centered at (0, 0) -->
+    <!-- Left Wall (Y = +5m) -->
+    <geom name="surrounding_wall_left" type="box" size="5.0 0.05 0.5" pos="0.0 5.0 0.5" material="wall_mat"/>
+    <!-- Right Wall (Y = -5m) -->
+    <geom name="surrounding_wall_right" type="box" size="5.0 0.05 0.5" pos="0.0 -5.0 0.5" material="wall_mat"/>
+    <!-- Back Wall (X = -5m) -->
+    <geom name="surrounding_wall_back" type="box" size="0.05 5.0 0.5" pos="-5.0 0.0 0.5" material="wall_mat"/>
+    <!-- Front Wall (X = +5m) -->
+    <geom name="surrounding_wall_front" type="box" size="0.05 5.0 0.5" pos="5.0 0.0 0.5" material="wall_mat"/>
+
+    <!-- Cube Target: size 0.25 x 0.25 x 0.25 at (4, -4, 0.125) -->
+    <geom name="cube_target" type="box" size="0.125 0.125 0.125" pos="4.0 -4.0 0.125" material="target_mat"/>
+  </worldbody>
+</mujoco>

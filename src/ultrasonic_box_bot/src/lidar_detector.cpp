@@ -9,10 +9,10 @@ class LidarDetectorNode : public rclcpp::Node
 public:
     LidarDetectorNode() : Node("lidar_detector_node")
     {
-        // Subscribe to the /scan topic
+        // Subscribe to the /scan topic with SensorDataQoS (matching Gazebo and MuJoCo best-effort publishers)
         subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/scan", 
-            10, 
+            rclcpp::SensorDataQoS(), 
             std::bind(&LidarDetectorNode::scan_callback, this, std::placeholders::_1)
         );
         

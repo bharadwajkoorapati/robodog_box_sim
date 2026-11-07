@@ -24,7 +24,13 @@ install(DIRECTORY
   rviz
   worlds
   config
+  scripts
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/mujoco_simulator_node.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 
@@ -76,6 +82,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(autonavigator test/test_autonavigator.py TIMEOUT 120)
   ament_add_pytest_test(map_padder test/test_map_padder.py TIMEOUT 60)
   ament_add_pytest_test(nav_goal_sender test/test_nav_goal_sender.py TIMEOUT 120)
+  ament_add_pytest_test(mujoco_simulator tests/test_mujoco_simulator.py TIMEOUT 60)
 endif()
 
 ament_package()

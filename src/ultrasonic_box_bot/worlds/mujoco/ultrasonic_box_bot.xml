@@ -1,0 +1,70 @@
+<mujoco model="ultrasonic_box_bot">
+  <!-- Standalone MuJoCo model of the Ultrasonic Box Bot -->
+  <compiler angle="radian" coordinate="local"/>
+
+  <asset>
+    <material name="chassis_mat" rgba="0.6 0.6 0.6 1.0"/>
+    <material name="wheel_mat" rgba="0.05 0.05 0.05 1.0"/>
+    <material name="caster_mat" rgba="0.05 0.05 0.05 1.0"/>
+    <material name="sensor_mat" rgba="1.0 0.4 0.0 1.0"/>
+    <material name="lidar_mat" rgba="0.05 0.05 0.05 1.0"/>
+  </asset>
+
+  <default>
+    <joint damping="0.05" armature="0.01"/>
+    <geom condim="3"/>
+  </default>
+
+  <worldbody>
+    <body name="base_link" pos="0 0 0.06">
+      <freejoint name="root"/>
+      <!-- Main Chassis: 0.4m (x) x 0.3m (y) x 0.15m (z), mass 5.0kg -->
+      <!-- MuJoCo box size is half-extent: 0.2 x 0.15 x 0.075, pos z=0.035 gives 0.02m clearance -->
+      <geom name="chassis" type="box" size="0.2 0.15 0.075" pos="0 0 0.035" mass="5.0" material="chassis_mat"/>
+
+      <!-- Front Caster Wheel: radius 0.03m, mass 0.1kg, center z=-0.03 relative to base_link -->
+      <!-- Low friction ensures omni-directional contact without wheel drag -->
+      <geom name="caster_wheel" type="sphere" size="0.03" pos="0.15 0.0 -0.03" mass="0.1" material="caster_mat" friction="0.001 0.001 0.001"/>
+
+      <!-- Left Wheel: radius 0.06m, half-width 0.02m, separation 0.34m (y = +0.17m), x = -0.1m -->
+      <body name="left_wheel_link" pos="-0.1 0.17 0.0">
+        <joint name="left_wheel_joint" type="hinge" axis="0 1 0"/>
+        <geom name="left_wheel" type="cylinder" size="0.06 0.02" quat="0.7071068 0.7071068 0 0" mass="0.3" material="wheel_mat" friction="1.5 0.005 0.0001"/>
+      </body>
+
+      <!-- Right Wheel: radius 0.06m, half-width 0.02m, separation 0.34m (y = -0.17m), x = -0.1m -->
+      <body name="right_wheel_link" pos="-0.1 -0.17 0.0">
+        <joint name="right_wheel_joint" type="hinge" axis="0 1 0"/>
+        <geom name="right_wheel" type="cylinder" size="0.06 0.02" quat="0.7071068 0.7071068 0 0" mass="0.3" material="wheel_mat" friction="1.5 0.005 0.0001"/>
+      </body>
+
+      <!-- 2D LiDAR: mounted at z = 0.125m relative to base_link (Z = 0.185m from ground) -->
+      <geom name="lidar_visual" type="cylinder" size="0.02 0.015" pos="0 0 0.125" mass="0.05" material="lidar_mat" contype="0" conaffinity="0"/>
+      <site name="lidar" pos="0 0 0.125" size="0.01" rgba="0 0 0 1"/>
+
+      <!-- Ultrasonic Sensors: 4 directional range sensors -->
+      <!-- Front (+X) -->
+      <geom name="us_front_visual" type="cylinder" size="0.008 0.005" pos="0.205 0 0.035" quat="0.7071068 0 0.7071068 0" mass="0.01" material="sensor_mat" contype="0" conaffinity="0"/>
+      <site name="us_front" pos="0.205 0 0.035" size="0.005" rgba="1 0.4 0 1"/>
+
+      <!-- Back (-X) -->
+      <geom name="us_back_visual" type="cylinder" size="0.008 0.005" pos="-0.205 0 0.035" quat="0.7071068 0 0.7071068 0" mass="0.01" material="sensor_mat" contype="0" conaffinity="0"/>
+      <site name="us_back" pos="-0.205 0 0.035" quat="0 0 0 1" size="0.005" rgba="1 0.4 0 1"/>
+
+      <!-- Left (+Y) -->
+      <geom name="us_left_visual" type="cylinder" size="0.008 0.005" pos="0 0.155 0.035" quat="0.7071068 0.7071068 0 0" mass="0.01" material="sensor_mat" contype="0" conaffinity="0"/>
+      <site name="us_left" pos="0 0.155 0.035" quat="0.7071068 0 0 0.7071068" size="0.005" rgba="1 0.4 0 1"/>
+
+      <!-- Right (-Y) -->
+      <geom name="us_right_visual" type="cylinder" size="0.008 0.005" pos="0 -0.155 0.035" quat="0.7071068 0.7071068 0 0" mass="0.01" material="sensor_mat" contype="0" conaffinity="0"/>
+      <site name="us_right" pos="0 -0.155 0.035" quat="0.7071068 0 0 -0.7071068" size="0.005" rgba="1 0.4 0 1"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- Differential drive velocity actuators -->
+    <velocity name="left_wheel_actuator" joint="left_wheel_joint" kv="10.0" ctrlrange="-20 20"/>
+    <velocity name="right_wheel_actuator" joint="right_wheel_joint" kv="10.0" ctrlrange="-20 20"/>
+  </actuator>
+</mujoco>
+

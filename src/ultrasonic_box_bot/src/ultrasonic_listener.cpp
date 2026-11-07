@@ -16,10 +16,10 @@ public:
     enable_stop_command_ = this->declare_parameter<bool>("enable_stop_command", false);
     stop_distance_ = this->declare_parameter<double>("stop_distance", 0.5);
 
-    // Subscribe to front ultrasonic sensor
+    // Subscribe to front ultrasonic sensor (SensorDataQoS matches bridge/simulator best-effort output)
     subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       "/us_front", 
-      10, // QoS History Depth
+      rclcpp::SensorDataQoS(),
       std::bind(&UltrasonicParser::topic_callback, this, std::placeholders::_1)
     );
 

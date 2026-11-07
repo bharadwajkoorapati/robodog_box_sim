@@ -1,5 +1,69 @@
 # File-wise changes
 
+## Table of Contents / Index
+- [Quality, QoS & Codebase Cleanup (2026-11-07)](#quality-qos--codebase-cleanup-2026-11-07)
+- [MuJoCo Simulation Integration (Phases 1 - 4)](#mujoco-simulation-integration-phases-1---4)
+- [SLAM & Nav2 Tuning & Configurations](#slam--nav2-tuning--configurations)
+- [Safety Watchdog & Map Padding Components](#safety-watchdog--map-padding-components)
+- [Historical Changes & Reversions](#historical-changes--reversions)
+
+---
+
+## Quality, QoS & Codebase Cleanup (2026-11-07)
+
+- `src/lidar_detector.cpp`:
+  - Switched `/scan` subscription QoS from default depth `10` (Reliable) to `rclcpp::SensorDataQoS()` (BestEffort). Resolves DDS QoS incompatibility where messages published by `ros_gz_bridge` and `mujoco_simulator_node.py` were dropped.
+- `src/ultrasonic_listener.cpp`:
+  - Switched `/us_front` subscription QoS from default depth `10` to `rclcpp::SensorDataQoS()`, resolving DDS QoS drops.
+- `launch/mujoco_sim_launch.py`:
+  - Replaced machine-specific hardcoded absolute paths (`/home/shadowb/...`) with dynamic relative resolution using `pkg_src_dir`, `pkg_share`, and `os.environ.get('VIRTUAL_ENV')`.
+- `CMakeLists.txt`:
+  - Removed redundant `models` from `install(DIRECTORY ...)` to avoid bloating the installed share directory with duplicate MJCF files.
+  - Registered `ament_add_pytest_test(mujoco_simulator tests/test_mujoco_simulator.py TIMEOUT 60)` so standard `colcon test` runs include the MuJoCo unit test suite.
+- `tests/test_mujoco_simulator.py`:
+  - Added `pytest.importorskip("mujoco")` guard and automatic `sys.path` package resolution.
+- `codebase.md`, `learnings.md`, `.context.md`, `CHANGES.md`:
+  - Added comprehensive Table of Contents / Quick Indices at the top of all documentation files for fast navigation without reading through whole documents.
+  - Updated `codebase.md` to document `worlds/slam_world.sdf` and `worlds/mujoco/` (removing obsolete references to `empty_us_world.sdf`).
+  - Corrected `learnings.md` note regarding RViz config alignment.
+  - Added architectural redundancy explanation for `models/mujoco/`.
+
+---
+
+## MuJoCo Simulation Integration (Phases 1 - 4)
+  - Standalone MJCF robot model for `ultrasonic_box_bot`.
+  - Dimensions: chassis $0.4\text{m} \times 0.3\text{m} \times 0.15\text{m}$, mass $5.0\text{kg}$.
+  - Continuous hinge joints with velocity actuators (`kv=10.0`, `ctrlrange=[-20, 20]`) for left and right wheels ($R=0.06\text{m}$, separation $0.34\text{m}$).
+  - Low-friction ($0.001$) contact sphere for the front caster wheel ($R=0.03\text{m}$).
+  - Sensor sites for 2D LiDAR (`lidar`) and 4 directional ultrasonic sensors (`us_front`, `us_back`, `us_left`, `us_right`).
+- worlds/mujoco/slam_world.xml & models/mujoco/slam_world.xml (new):
+  - MJCF world matching Gazebo `slam_world.sdf`: $50\text{m} \times 50\text{m}$ ground plane, two internal obstacle walls (`maze_wall_1`, `maze_wall_2`), four outer perimeter walls (`surrounding_wall_*`), target cube at $(4.0, -4.0)$, and implicit-fast integrator (`dt=0.005\text{s}`).
+- scripts/mujoco_simulator_node.py (new):
+  - Drop-in simulator node bridging MuJoCo physics with ROS 2 Nav2/SLAM stack.
+  - Subscribes to `/cmd_vel_safe` (or `/cmd_vel`) and performs differential drive inverse kinematics: $\omega_{L,R} = (v \mp \frac{1}{2} \omega L) / R$.
+  - Publishes `/clock` (`rosgraph_msgs/msg/Clock`) synchronized with simulated physics time.
+  - Publishes `/odom` (`nav_msgs/msg/Odometry`) and broadcasts TF `odom -> base_footprint`.
+  - Publishes `/joint_states` for wheel links so `robot_state_publisher` maintains the full TF tree.
+  - High-performance 2D LiDAR raycaster (`mj_ray`) generating 361-sample scans on `/scan` (`sensor_msgs/msg/LaserScan` with `frame_id: lidar_link`).
+  - Added wall-clock time synchronization with configurable `real_time_factor` (default `1.0`), eliminating the 4x slow-motion crawl (previously only 1 step of 0.005s per 0.02s timer = 0.25x RTF) and ensuring smooth real-time execution in RViz.
+  - Uses `qos_profile_sensor_data` (BestEffort, Volatile) for `/scan` and `/us_*` for full QoS compatibility with SLAM Toolbox, Nav2 costmaps, and RViz.
+  - Added `ExternalShutdownException` handling for graceful termination.
+  - Ultrasonic sensor raycasters producing 5-beam FOV scans on `/us_front`, `/us_back`, `/us_left`, `/us_right`.
+  - Headless execution with optional passive GLFW viewer support (`mujoco.viewer.launch_passive`).
+- launch/mujoco_sim_launch.py (new):
+  - Dedicated launch file for running the entire navigation stack inside MuJoCo.
+  - Preserves Gazebo launch file (`launch/gz_sim_launch.py`) untouched.
+  - Automatically resolves `.venv/bin/python3` across workspace candidate directories to ensure MuJoCo dependencies are cleanly loaded.
+  - Seamlessly starts `robot_state_publisher`, `mujoco_simulator_node`, `cmd_vel_watchdog`, `target_cube_publisher`, `map_padder`, `sensor_ready`, `slam_toolbox`, `nav2_navigation`, `target_nav2_client`, and `rviz2`.
+- End-to-End Verification (Phases 3 & 4):
+  - Passed 5/5 unit tests in `tests/test_mujoco_simulator.py`.
+  - Verified `sensor_ready` gate exits 0 on live `/scan`, `/odom`, and TF.
+  - Full live autonomous test in MuJoCo: robot initialized at $(0, 0)$, SLAM built live map, Nav2 planned path on `/plan`, issued $0.25\text{ m/s}$ velocity commands, navigated through maze corridor, and reached $(4.14, -3.50)$ at target cube.
+- tests/test_mujoco_simulator.py (new):
+  - Comprehensive unit test suite covering MJCF model loading, physical kinematics forward step, 2D LiDAR raycast obstacle detection distance ($\approx 0.95\text{m}$), Euler/quaternion conversions, and ROS 2 node lifecycle.
+- CMakeLists.txt:
+  - Installed `models` and `scripts` directories and marked `scripts/mujoco_simulator_node.py` as an installed executable program.
+
 - config/slam_toolbox_params.yaml: stricter scan matching (0.1 -> 0.35), shorter
   link distance, larger minimum travel step, loop closing disabled. Prevents the
   mid-drive `map -> odom` rewrites that made the robot "forget where it is".
