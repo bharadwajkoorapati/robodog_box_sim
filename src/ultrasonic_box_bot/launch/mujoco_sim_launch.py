@@ -206,15 +206,13 @@ def generate_launch_description():
         }]
     )
 
-    # 2. MuJoCo Physics Simulator Node (Replaces Gazebo Sim + ros_gz_bridge)
-    # Using python_exec guarantees it uses .venv with the installed mujoco package
     mujoco_simulator_node = Node(
         executable=python_exec,
         arguments=[mujoco_script_candidate],
         name='mujoco_simulator_node',
         output='screen',
         parameters=[{
-            'use_sim_time': False,  # Simulator generates the clock
+            'use_sim_time': False,
             'model_path': mujoco_model,
             'headless': ParameterValue(headless, value_type=bool),
             'real_time_factor': ParameterValue(real_time_factor, value_type=float),
@@ -225,7 +223,6 @@ def generate_launch_description():
         }]
     )
 
-    # 3. Command watchdog: /cmd_vel -> /cmd_vel_safe
     cmd_vel_watchdog = Node(
         package='ultrasonic_box_bot',
         executable='cmd_vel_watchdog',
@@ -240,7 +237,6 @@ def generate_launch_description():
         }],
     )
 
-    # 4. Target Cube Publisher
     target_cube_publisher = Node(
         package='ultrasonic_box_bot',
         executable='target_cube_publisher',
@@ -253,7 +249,6 @@ def generate_launch_description():
         }]
     )
 
-    # 5. Map Padder: /map -> /map_padded
     map_padder = Node(
         package='ultrasonic_box_bot',
         executable='map_padder',
@@ -270,7 +265,6 @@ def generate_launch_description():
         }],
     )
 
-    # 6. Sensor Ready Gate
     sensor_ready = Node(
         package='ultrasonic_box_bot',
         executable='sensor_ready',
@@ -286,7 +280,6 @@ def generate_launch_description():
         }],
     )
 
-    # 7. SLAM Toolbox
     slam_toolbox_node = LifecycleNode(
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
@@ -300,7 +293,6 @@ def generate_launch_description():
         condition=UnlessCondition(localization),
     )
 
-    # 8. Saved-map localization (optional)
     localization_bringup = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_nav2_bringup, 'launch', 'localization_launch.py')
@@ -365,7 +357,6 @@ def generate_launch_description():
         )
     )
 
-    # 9. Nav2 Bringup
     start_nav2_when_slam_active = RegisterEventHandler(
         OnStateTransition(
             target_lifecycle_node=slam_toolbox_node,
@@ -398,7 +389,6 @@ def generate_launch_description():
         )
     )
 
-    # 10. Target -> Nav2 Goal Client
     goal_client_enabled = PythonExpression([
         "'true' if ('", use_nav2_goal_client, "'.lower() in ('true', '1') and '",
         use_autonav, "'.lower() not in ('true', '1')) else 'false'",
@@ -423,7 +413,6 @@ def generate_launch_description():
         }],
     )
 
-    # 11. RViz2
     rviz2 = Node(
         package='rviz2',
         executable='rviz2',
@@ -434,7 +423,6 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
 
-    # 12. Autonavigator
     autonavigator = Node(
         package='ultrasonic_box_bot',
         executable='autonavigator_node',
