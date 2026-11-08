@@ -15,7 +15,7 @@
 ---
 
 ### Rover Autonomous Navigation Demo
-![Rover Navigation Demo]![me](https://github.com/Daisyliu6/Daisyliu6/blob/master/me.gif)
+![Rover Navigation Demo]![me](src/ultrasonic_box_bot/docs/media/rover_navigation.gif)
 *Synchronized autonomous navigation: MuJoCo 3D physics with raycast LiDAR perception (left) coupled with ROS 2 SLAM Toolbox occupancy mapping and Nav2 trajectory tracking (right).*
 
 </div>
