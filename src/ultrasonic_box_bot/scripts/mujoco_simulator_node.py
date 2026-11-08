@@ -7,6 +7,14 @@ import sys
 import threading
 import time
 
+# Ensure virtual environment site-packages is in sys.path if mujoco is installed there
+for cand in [
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.venv', 'lib', 'python3.12', 'site-packages'),
+    os.path.expanduser('~/ros2/ros2_ws/src/ultrasonic_box_bot/.venv/lib/python3.12/site-packages'),
+]:
+    if os.path.isdir(cand) and cand not in sys.path:
+        sys.path.insert(0, cand)
+
 import mujoco
 try:
     import mujoco.viewer

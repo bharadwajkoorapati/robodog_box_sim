@@ -86,8 +86,10 @@ def generate_launch_description():
     # Resolve python interpreter with mujoco installed (.venv preferred)
     venv_candidates = [
         os.path.join(os.environ['VIRTUAL_ENV'], 'bin', 'python3') if 'VIRTUAL_ENV' in os.environ else None,
+        os.path.expanduser('~/ros2/ros2_ws/src/ultrasonic_box_bot/.venv/bin/python3'),
         os.path.join(pkg_src_dir, '.venv', 'bin', 'python3'),
         os.path.abspath(os.path.join(pkg_src_dir, '..', '..', '.venv', 'bin', 'python3')),
+        os.path.abspath(os.path.join(pkg_share, '..', '..', '..', '..', 'src', 'ultrasonic_box_bot', '.venv', 'bin', 'python3')),
         os.path.abspath(os.path.join(pkg_share, '..', '..', '..', 'src', 'ultrasonic_box_bot', '.venv', 'bin', 'python3')),
         os.path.abspath(os.path.join(pkg_share, '..', '..', '..', '.venv', 'bin', 'python3')),
     ]

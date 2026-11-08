@@ -12,6 +12,13 @@
       <render_engine>ogre2</render_engine>
     </plugin>
 
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>-2.5 -3.5 5.5 0 0.75 0.65</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 10 0 0 0</pose>

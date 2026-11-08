@@ -6,11 +6,15 @@ import unittest
 import numpy as np
 import pytest
 
-mujoco = pytest.importorskip("mujoco")
-
 ws_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ws_path not in sys.path:
     sys.path.insert(0, ws_path)
+
+venv_site = os.path.join(ws_path, '.venv', 'lib', 'python3.12', 'site-packages')
+if os.path.isdir(venv_site) and venv_site not in sys.path:
+    sys.path.insert(0, venv_site)
+
+mujoco = pytest.importorskip("mujoco")
 
 import rclpy
 from geometry_msgs.msg import Twist
